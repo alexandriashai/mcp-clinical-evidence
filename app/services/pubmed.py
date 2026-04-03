@@ -48,6 +48,7 @@ async def fetch_summaries(pmids: list[str]) -> list[dict]:
         info = result.get(pmid, {})
         if not info or "error" in info:
             continue
+        pmc_id = next((eid["value"] for eid in info.get("articleids", []) if eid.get("idtype") == "pmc"), "")
         articles.append({
             "pmid": pmid,
             "title": info.get("title", ""),
@@ -55,6 +56,8 @@ async def fetch_summaries(pmids: list[str]) -> list[dict]:
             "journal": info.get("fulljournalname", info.get("source", "")),
             "pub_date": info.get("pubdate", ""),
             "doi": next((eid["value"] for eid in info.get("articleids", []) if eid.get("idtype") == "doi"), ""),
+            "pmc_id": pmc_id,
+            "pmc_url": f"https://pmc.ncbi.nlm.nih.gov/articles/{pmc_id}/" if pmc_id else "",
             "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
         })
     return articles

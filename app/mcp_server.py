@@ -40,7 +40,8 @@ async def pubmed_search(
         lines.append(f"### {a['title']}")
         lines.append(f"**Authors:** {a['authors']}")
         lines.append(f"**Journal:** {a['journal']} ({a['pub_date']})")
-        lines.append(f"**PMID:** [{a['pmid']}]({a['url']})" + (f" | DOI: {a['doi']}" if a['doi'] else ""))
+        pmc = f" | [PMC Full Text]({a['pmc_url']})" if a.get("pmc_url") else ""
+        lines.append(f"**PMID:** [{a['pmid']}]({a['url']})" + (f" | DOI: {a['doi']}" if a['doi'] else "") + pmc)
         if a.get("abstract"):
             abstract = a["abstract"][:600]
             if len(a["abstract"]) > 600:
@@ -214,6 +215,7 @@ async def drug_approvals(drug_name: str) -> str:
 async def medical_evidence_search(
     condition: str,
     treatment: str = "",
+    author: str = "",
     evidence_type: str = "all",
 ) -> str:
     """Comprehensive evidence search across PubMed, ClinicalTrials.gov, and FDA.
@@ -222,19 +224,28 @@ async def medical_evidence_search(
     Args:
         condition: The medical condition (e.g., "treatment-resistant depression")
         treatment: The specific treatment in question (e.g., "transcranial magnetic stimulation")
+        author: Optional author name to filter by (e.g., "Buncke" for surgeon publication records)
         evidence_type: "all", "pubmed", "trials", or "fda"
     """
     query = f"{condition} {treatment}".strip()
+    if author:
+        query += f" {author}[Author]"
     sections = []
 
     if evidence_type in ("all", "pubmed"):
+        # Try systematic reviews/meta-analyses first using publication type filter
         articles = await pubmed.search_with_details(
-            f"{query} systematic review OR meta-analysis", max_results=5, article_types=""
+            query, max_results=5, article_types="systematic review"
         )
+        # If no systematic reviews found, fall back to all article types
+        if not articles:
+            articles = await pubmed.search_with_details(query, max_results=5, article_types="")
+
         if articles:
-            lines = ["## PubMed — Systematic Reviews & Meta-Analyses\n"]
+            lines = ["## PubMed — Clinical Evidence\n"]
             for a in articles:
-                lines.append(f"- **{a['title']}** — {a['journal']} ({a['pub_date']}) [PMID: {a['pmid']}]({a['url']})")
+                pmc_link = f" | [PMC Full Text]({a['pmc_url']})" if a.get("pmc_url") else ""
+                lines.append(f"- **{a['title']}** — {a['journal']} ({a['pub_date']}) [PMID: {a['pmid']}]({a['url']}){pmc_link}")
             sections.append("\n".join(lines))
 
     if evidence_type in ("all", "trials") and treatment:
