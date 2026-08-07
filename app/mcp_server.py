@@ -17,6 +17,67 @@ mcp = FastMCP(
 )
 
 
+@mcp.resource("docs://about")
+async def about() -> str:
+    """About this MCP server and its data sources."""
+    return (
+        "Clinical Evidence Search MCP Server\n\n"
+        "Search biomedical literature, clinical trials, and FDA drug data for "
+        "medical necessity evidence in insurance litigation.\n\n"
+        "Data Sources:\n"
+        "- PubMed/MEDLINE: 37M+ biomedical citations from the NLM\n"
+        "- ClinicalTrials.gov: 500K+ clinical trial registrations\n"
+        "- OpenFDA: Drug labels, adverse event reports (FAERS), approval history\n\n"
+        "Use Cases:\n"
+        "- Build medical necessity arguments for denied treatments\n"
+        "- Find systematic reviews and meta-analyses supporting a treatment\n"
+        "- Document FDA-approved indications for drugs\n"
+        "- Show adverse events from alternative treatments (forced by insurer)\n"
+        "- Find active clinical trials demonstrating treatment is evidence-based\n\n"
+        "Tools:\n"
+        "- pubmed_search: Search PubMed biomedical literature\n"
+        "- clinical_trial_search: Search ClinicalTrials.gov\n"
+        "- clinical_trial_detail: Get full trial details by NCT ID\n"
+        "- drug_label: FDA drug labeling (indications, warnings)\n"
+        "- drug_adverse_events: FDA adverse event reports (FAERS)\n"
+        "- drug_approvals: FDA approval history\n"
+        "- medical_evidence_search: Comprehensive cross-source evidence search\n"
+    )
+
+
+@mcp.prompt()
+async def medical_necessity_evidence(condition: str = "treatment-resistant depression", treatment: str = "ketamine infusion") -> str:
+    """Build a medical necessity evidence package for an insurance appeal."""
+    return (
+        f"Build a medical necessity evidence package for {treatment} to treat {condition}.\n\n"
+        f"1. Search for systematic reviews: pubmed_search query='{condition} {treatment} "
+        f"systematic review' article_type='systematic review'\n"
+        f"2. Search for RCTs: pubmed_search query='{condition} {treatment} randomized "
+        f"controlled trial' article_type='randomized controlled trial'\n"
+        f"3. Find active clinical trials: clinical_trial_search condition='{condition}' "
+        f"intervention='{treatment}'\n"
+        f"4. Check FDA labeling: drug_label drug_name='{treatment}'\n"
+        f"5. Check adverse events for alternative treatments the insurer is forcing\n\n"
+        f"Compile the evidence showing {treatment} is medically necessary for {condition}."
+    )
+
+
+@mcp.prompt()
+async def drug_safety_comparison(preferred_drug: str = "Ozempic", denied_drug: str = "Wegovy") -> str:
+    """Compare safety profiles of two drugs for an insurance appeal."""
+    return (
+        f"Compare the safety profiles of {preferred_drug} (insurer-preferred) vs "
+        f"{denied_drug} (denied by insurer).\n\n"
+        f"1. Get FDA labels for both: drug_label drug_name='{preferred_drug}' and "
+        f"drug_label drug_name='{denied_drug}'\n"
+        f"2. Compare adverse events: drug_adverse_events drug_name='{preferred_drug}' and "
+        f"drug_adverse_events drug_name='{denied_drug}'\n"
+        f"3. Search PubMed for head-to-head comparisons: pubmed_search "
+        f"query='{preferred_drug} {denied_drug} comparison'\n\n"
+        f"Identify safety differences that support the patient's preferred treatment."
+    )
+
+
 @mcp.tool()
 async def pubmed_search(
     query: str,
